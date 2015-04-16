@@ -302,15 +302,6 @@ object Serializer {
   private[mandrill] def deserializeEmail (json: JsValue): JsResult[Email] = {
     json.validate[Email]
   }
-
-  def main2(args: Array[String]) {
-    val conf = ConfigFactory.load()
-    val str = conf.getList("response").render(ConfigRenderOptions.concise())
-
-    val resp = Json.parse(str).validate[List[Result]]
-
-    print(resp)
-  }
 }
 
 
