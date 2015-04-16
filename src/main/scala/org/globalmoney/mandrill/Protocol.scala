@@ -19,13 +19,14 @@ import play.api.libs.json.Reads.dateReads
 case class Request(key: String, message: Email, async: Option[Boolean] = Some(false),
                     ipPool: Option[String] = None, sendAt: Option[Date] = None) {
 
-  private[mandrill] def withDefaults(default: Request): Request = {
-    new Request(key,
-                message.withDefaults(default.message),
-                async.fold(default.async){Some(_)},
-                ipPool.fold(default.ipPool){Some(_)},
-                sendAt.fold(default.sendAt){Some(_)})
-  }
+  private[mandrill] def withDefaults(default: Request) = Request(
+    key,
+    message.withDefaults(default.message),
+    async.fold(default.async){Some(_)},
+    ipPool.fold(default.ipPool){Some(_)},
+    sendAt.fold(default.sendAt){Some(_)}
+  )
+
 }
 
 case class AdditionalSettings(triggers: Triggers = new Triggers(),
@@ -44,23 +45,23 @@ case class AdditionalSettings(triggers: Triggers = new Triggers(),
                               metadata: Option[Map[String, String]] = None,
                               recipientMetadata: Option[Seq[PerRecipMetadata]] = None) {
 
-  private[mandrill] def withDefaults(default: AdditionalSettings): AdditionalSettings = {
-    new AdditionalSettings(triggers.withDefaults(default.triggers),
-                          headers.fold(default.headers){Some(_)},
-                          bccAddress.fold(default.bccAddress){Some(_)},
-                          trackingDomain.fold(default.trackingDomain){Some(_)},
-                          signingDomain.fold(default.signingDomain){Some(_)},
-                          returnPathDomain.fold(default.returnPathDomain){Some(_)},
-                          if (Option(mergeLanguage).isDefined) mergeLanguage else default.mergeLanguage,
-                          globalMergeVars.fold(default.globalMergeVars){Some(_)},
-                          mergeVars.fold(default.mergeVars){Some(_)},
-                          tags.fold(default.tags){Some(_)},
-                          subAccount.fold(default.subAccount){Some(_)},
-                          googleAnalyticsDomains.fold(default.googleAnalyticsCampaign){Some(_)},
-                          googleAnalyticsCampaign.fold(default.googleAnalyticsCampaign){Some(_)},
-                          metadata.fold(default.metadata){Some(_)},
-                          recipientMetadata.fold(default.recipientMetadata){Some(_)})
-  }
+  private[mandrill] def withDefaults(default: AdditionalSettings): AdditionalSettings = AdditionalSettings(
+    triggers.withDefaults(default.triggers),
+    headers.fold(default.headers){Some(_)},
+    bccAddress.fold(default.bccAddress){Some(_)},
+    trackingDomain.fold(default.trackingDomain){Some(_)},
+    signingDomain.fold(default.signingDomain){Some(_)},
+    returnPathDomain.fold(default.returnPathDomain){Some(_)},
+    if (Option(mergeLanguage).isDefined) mergeLanguage else default.mergeLanguage,
+    globalMergeVars.fold(default.globalMergeVars){Some(_)},
+    mergeVars.fold(default.mergeVars){Some(_)},
+    tags.fold(default.tags){Some(_)},
+    subAccount.fold(default.subAccount){Some(_)},
+    googleAnalyticsDomains.fold(default.googleAnalyticsCampaign){Some(_)},
+    googleAnalyticsCampaign.fold(default.googleAnalyticsCampaign){Some(_)},
+    metadata.fold(default.metadata){Some(_)},
+    recipientMetadata.fold(default.recipientMetadata){Some(_)}
+  )
 }
 
 case class Triggers(important: Option[Boolean] = Some(false),
@@ -73,74 +74,54 @@ case class Triggers(important: Option[Boolean] = Some(false),
                     preserveRecipients: Option[Boolean] = None,
                     viewContentLink: Option[Boolean] = None,
                     merge: Option[Boolean] = None) {
-  private[mandrill] def withDefaults(default: Triggers): Triggers = {
-    new Triggers(important.fold(default.important){Some(_)},
-                 trackOpens.fold(default.trackOpens){Some(_)},
-                 trackClicks.fold(default.trackClicks){Some(_)},
-                 autoText.fold(default.autoText){Some(_)},
-                 autoHtml.fold(default.autoHtml){Some(_)},
-                 inlineCss.fold(default.inlineCss){Some(_)},
-                 urlStripQs.fold(default.urlStripQs){Some(_)},
-                 preserveRecipients.fold(default.preserveRecipients){Some(_)},
-                 viewContentLink.fold(default.viewContentLink){Some(_)},
-                 merge.fold(default.merge){Some(_)})
-  }
+  private[mandrill] def withDefaults(default: Triggers): Triggers = Triggers(
+    important.fold(default.important){Some(_)},
+    trackOpens.fold(default.trackOpens){Some(_)},
+    trackClicks.fold(default.trackClicks){Some(_)},
+    autoText.fold(default.autoText){Some(_)},
+    autoHtml.fold(default.autoHtml){Some(_)},
+    inlineCss.fold(default.inlineCss){Some(_)},
+    urlStripQs.fold(default.urlStripQs){Some(_)},
+    preserveRecipients.fold(default.preserveRecipients){Some(_)},
+    viewContentLink.fold(default.viewContentLink){Some(_)},
+    merge.fold(default.merge){Some(_)}
+  )
 }
 
-case class Email(bodyHtml: Option[String] = None,
-                 bodyText: Option[String] = None,
+case class Email(
                  subject: Option[String] = None,
                  from: Option[String] = None,
                  fromName: Option[String] = None,
-                 recipients: Option[Seq[Recipient]] = None,
+                 to: Option[Seq[Recipient]] = None,
+                 bodyText: Option[String] = None,
+                 bodyHtml: Option[String] = None,
                  attachments: Option[Seq[FileAttachment]] = None,
                  images: Option[Seq[ContentImage]] = None,
-                 settings: AdditionalSettings = new AdditionalSettings()) {
-  private[mandrill] def withDefaults(default: Email): Email = {
-    new Email(bodyHtml.fold(default.bodyHtml){Some(_)},
-              bodyText.fold(default.bodyText){Some(_)},
-              subject.fold(default.subject){Some(_)},
-              from.fold(default.from){Some(_)},
-              fromName.fold(default.fromName){Some(_)},
-              recipients.fold(default.recipients){Some(_)},
-              attachments.fold(default.attachments){Some(_)},
-              images.fold(default.images){Some(_)},
-              settings.withDefaults(default.settings)
+                 settings: AdditionalSettings = AdditionalSettings()) {
+
+  private[mandrill] def withDefaults(default: Email) = Email(
+    subject.fold(default.subject){Some(_)},
+    from.fold(default.from){Some(_)},
+    fromName.fold(default.fromName){Some(_)},
+    to.fold(default.to){Some(_)},
+    bodyText.fold(default.bodyText){Some(_)},
+    bodyHtml.fold(default.bodyHtml){Some(_)},
+    attachments.fold(default.attachments){Some(_)},
+    images.fold(default.images){Some(_)},
+    settings.withDefaults(default.settings)
     )
-  }
 }
 
-case class Recipient(email: String,
-                     name: Option[String] = None,
-                     recipType: RecipientType = RecipientType.TO)
+case class Recipient(email: String, name: Option[String] = None, recipType: RecipientType = RecipientType.TO)
+case class FileAttachment(mimeType: String, name: String, content: String)
+case class ContentImage(mimeType: String, name: String, content: String)
+case class MergeVar(name: String, content: String)
+case class PerRecipMergeVar(email: String, vars: Option[Seq[MergeVar]] = None)
+case class PerRecipMetadata(email: String, values: Option[Map[String, Int]] = None)
 
-case class FileAttachment(mimeType: String,
-                          name: String, content: String)
-case class ContentImage(mimeType: String,
-                        name: String, content: String)
+case class MandrillError(status: SendStatusType, code: Int, name: String, message: String)
 
-case class MergeVar(name: String,
-                    content: String)
-case class PerRecipMergeVar(email: String,
-                            vars: Option[Seq[MergeVar]] = None)
-case class PerRecipMetadata(email: String,
-                            values: Option[Map[String, Int]] = None)
-
-
-case class Error(status: SendStatusType,
-                 code: Int,
-                 name: String,
-                 message: String)
-
-case class Response(results: Option[List[Result]] = None, error: Option[Error] = None) {
-  def isError: Boolean = {
-    error.isDefined
-  }
-}
-case class Result(email: String,
-                  status: SendStatusType,
-                  rejectReason: RejectReasonType,
-                  id: String)
+case class Result(email: String, status: SendStatusType, rejectReason: RejectReasonType, id: String)
 
 object RecipientType extends Enumeration {
   type RecipientType = Value
@@ -252,12 +233,12 @@ object Serializer {
   )(AdditionalSettings.apply, unlift(AdditionalSettings.unapply))
 
   implicit val emailFormat: Format[Email] = (
-    (__ \ "html").formatNullable[String] and
-    (__ \ "text").formatNullable[String] and
     (__ \ "subject").formatNullable[String] and
     (__ \ "from_email").formatNullable[String] and
     (__ \ "from_name").formatNullable[String] and
     (__ \ "to").formatNullable[Seq[Recipient]] and
+    (__ \ "text").formatNullable[String] and
+    (__ \ "html").formatNullable[String] and
     (__ \ "attachments").formatNullable[Seq[FileAttachment]] and
     (__ \ "images").formatNullable[Seq[ContentImage]] and
     (__).format[AdditionalSettings]
@@ -271,12 +252,12 @@ object Serializer {
     (__ \ "send_at").formatNullable[Date]
   )(Request.apply, unlift(Request.unapply))
 
-  implicit val errorFormat: Format[Error] = (
+  implicit val errorFormat: Format[MandrillError] = (
     (__ \ "status").format[SendStatusType] and
     (__ \ "code").format[Int] and
     (__ \ "name").format[String] and
     (__ \ "message").format[String]
-    )(Error.apply, unlift(Error.unapply))
+    )(MandrillError.apply, unlift(MandrillError.unapply))
 
   implicit val resultFormat: Format[Result] = (
     (__ \ "email").format[String] and
@@ -288,28 +269,6 @@ object Serializer {
   def printJson (request: Request, pretty: Boolean = false): String = {
     val json = Json.toJson(request)
     if (pretty) Json.prettyPrint(json) else Json.stringify(json)
-  }
-
-  private[mandrill] def deserializeResult (json: JsValue): JsResult[Response] = {
-    json.validate[List[Result]] match {
-      case r: JsSuccess[List[Result]] => {
-        JsSuccess(new Response(Some(r.get)))
-      }
-      case e: JsError => { e }
-    }
-  }
-
-  private[mandrill] def deserializeError (json: JsValue): JsResult[Response] = {
-    json.validate[Error] match {
-      case r: JsSuccess[Error] => {
-        JsSuccess(new Response(None, Some(r.get)))
-      }
-      case e: JsError => { e }
-    }
-  }
-
-  private[mandrill] def deserializeEmail (json: JsValue): JsResult[Email] = {
-    json.validate[Email]
   }
 }
 
