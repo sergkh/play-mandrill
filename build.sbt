@@ -10,6 +10,7 @@ resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/release
 
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play" % "2.3.8" % "provided",
+  "com.typesafe.play" %% "play-ws" % "2.3.8",
   "org.specs2" %% "specs2-core" % "2.4.9" % "test"
 )
 
