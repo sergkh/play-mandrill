@@ -74,7 +74,16 @@ case class Triggers(important: Option[Boolean] = Some(false),
                     viewContentLink: Option[Boolean] = None,
                     merge: Option[Boolean] = None) {
   private[mandrill] def withDefaults(default: Triggers): Triggers = {
-    new Triggers()
+    new Triggers(important.fold(default.important){Some(_)},
+                 trackOpens.fold(default.trackOpens){Some(_)},
+                 trackClicks.fold(default.trackClicks){Some(_)},
+                 autoText.fold(default.autoText){Some(_)},
+                 autoHtml.fold(default.autoHtml){Some(_)},
+                 inlineCss.fold(default.inlineCss){Some(_)},
+                 urlStripQs.fold(default.urlStripQs){Some(_)},
+                 preserveRecipients.fold(default.preserveRecipients){Some(_)},
+                 viewContentLink.fold(default.viewContentLink){Some(_)},
+                 merge.fold(default.merge){Some(_)})
   }
 }
 
