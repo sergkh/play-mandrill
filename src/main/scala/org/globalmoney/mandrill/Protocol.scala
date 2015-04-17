@@ -16,18 +16,21 @@ import play.api.libs.json.Reads.dateReads
 /**
  * Created by Viktor Zakalyuzhnyy on 07.04.15.
  */
-case class Request(key: String, message: Email, async: Option[Boolean] = Some(false),
+case class Request(key: String, message: Email, template: Option[Template] = None, async: Option[Boolean] = Some(false),
                     ipPool: Option[String] = None, sendAt: Option[Date] = None) {
+
 
   private[mandrill] def withDefaults(default: Request) = Request(
     key,
     message.withDefaults(default.message),
+    template.fold(default.template){Some(_)},
     async.fold(default.async){Some(_)},
     ipPool.fold(default.ipPool){Some(_)},
     sendAt.fold(default.sendAt){Some(_)}
   )
 
 }
+case class Template(name: String, content: Option[Seq[MergeVar]] = None)
 
 case class AdditionalSettings(triggers: Triggers = new Triggers(),
                               headers: Option[Map[String, String]] = None,
@@ -232,6 +235,11 @@ object Serializer {
     (__ \ "recipient_metadata").formatNullable[Seq[PerRecipMetadata]]
   )(AdditionalSettings.apply, unlift(AdditionalSettings.unapply))
 
+  implicit val templateFormat: Format[Template] = (
+    (__ \ "template_name").format[String] and
+    (__ \ "template_content").formatNullable[Seq[MergeVar]]
+  )(Template.apply, unlift(Template.unapply))
+
   implicit val emailFormat: Format[Email] = (
     (__ \ "subject").formatNullable[String] and
     (__ \ "from_email").formatNullable[String] and
@@ -247,6 +255,7 @@ object Serializer {
   implicit val requestFormat: Format[Request] = (
     (__ \ "key").format[String] and
     (__ \ "message").format[Email] and
+    (__).formatNullable[Template] and
     (__ \ "async").formatNullable[Boolean] and
     (__ \ "ip_pool").formatNullable[String] and
     (__ \ "send_at").formatNullable[Date]

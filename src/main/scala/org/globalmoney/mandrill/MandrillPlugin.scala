@@ -56,16 +56,27 @@ class MandrillPlugin(app: Application) extends play.api.Plugin {
 object MandrillPlugin {
   def send(email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None)(implicit app: play.api.Application) =
     app.plugin(classOf[MandrillPlugin]).get.instance.send(email, async, ipPool, sendAt)
+  def sendTemplate(template: Template, email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None)(implicit app: play.api.Application) =
+    app.plugin(classOf[MandrillPlugin]).get.instance.sendTemplate(template, email, async, ipPool, sendAt)
 }
 
 
 trait MandrillAPI {
   def send(email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
+  def sendTemplate(template: Template, email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
 }
 
 class MockMandrill(defaultMail: Email) extends MandrillAPI {
   override def send(email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]] = {
-    Logger.debug(s"Mock mandrill email send: ${Serializer.printJson(Request("", email.withDefaults(defaultMail)), pretty = true)}")
+    sendRequest(None, email, async, ipPool, sendAt)
+  }
+
+  override def sendTemplate(template: Template, email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]] = {
+    sendRequest(Some(template), email, async, ipPool, sendAt)
+  }
+
+  def sendRequest(template: Option[Template], email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]] = {
+    Logger.debug(s"Mock mandrill email send: ${Serializer.printJson(Request("", email.withDefaults(defaultMail), template), pretty = true)}")
     Future(List[Result]())
   }
 }
@@ -78,8 +89,20 @@ class RestMandrill(apiUrl: String, apiMailUrl: String, key: String, defaultMail:
                     async: Option[Boolean] = Some(false),
                     ipPool: Option[String] = None,
                     sendAt: Option[Date] = None): Future[List[Result]] = {
+    sendRequest(None, email, async, ipPool, sendAt)
+  }
 
-    val request = Request(key, email.withDefaults(defaultMail), async, ipPool, sendAt)
+  override def sendTemplate(template: Template, email: Email, async: Option[Boolean], ipPool: Option[String], sendAt: Option[Date]): Future[List[Result]] = {
+    sendRequest(Some(template), email, async, ipPool, sendAt)
+  }
+
+  def sendRequest(template: Option[Template],
+           email: Email,
+           async: Option[Boolean] = Some(false),
+           ipPool: Option[String] = None,
+           sendAt: Option[Date] = None): Future[List[Result]] = {
+
+    val request = Request(key, email.withDefaults(defaultMail), template, async, ipPool, sendAt)
     Logger.debug(s"Server request: ${Serializer.printJson(request, pretty = true)}")
 
     val responseFuture = WS.url(mailUrl).post(Serializer.printJson(request))
