@@ -8,7 +8,7 @@ import org.globalmoney.mandrill.RecipientType.RecipientType
 import org.globalmoney.mandrill.RejectReasonType.RejectReasonType
 import org.globalmoney.mandrill.SendStatusType.SendStatusType
 import play.api.data.validation.ValidationError
-import play.api.libs.json.DefaultWrites.StringWrites
+import play.api.libs.json.Writes.StringWrites
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -32,7 +32,7 @@ case class Request(key: String, message: Email, template: Option[Template] = Non
   )
 
 }
-case class Template(name: String, content: Seq[MergeVar] = None)
+case class Template(name: String, content: Seq[MergeVar] = Seq.empty)
 
 case class AdditionalSettings(triggers: Triggers = new Triggers(),
                               headers: Option[Map[String, String]] = None,
@@ -40,7 +40,7 @@ case class AdditionalSettings(triggers: Triggers = new Triggers(),
                               trackingDomain: Option[String] = None,
                               signingDomain: Option[String] = None,
                               returnPathDomain: Option[String] = None,
-                              mergeLanguage: Option[MergeLanguageType] = MergeLanguageType.MAILCHIMP,
+                              mergeLanguage: Option[MergeLanguageType] = None,
                               globalMergeVars: Seq[MergeVar] = Seq.empty,
                               mergeVars: Seq[PerRecipMergeVar] = Seq.empty,
                               tags: Seq[String] = Seq.empty,
@@ -57,7 +57,7 @@ case class AdditionalSettings(triggers: Triggers = new Triggers(),
     trackingDomain orElse default.trackingDomain,
     signingDomain orElse default.signingDomain,
     returnPathDomain orElse default.returnPathDomain,
-    mergeLanguage orElse default.mergeLanguage,
+    mergeLanguage orElse default.mergeLanguage orElse Some(MergeLanguageType.MAILCHIMP),
     if(globalMergeVars.nonEmpty) globalMergeVars else default.globalMergeVars,
     if(mergeVars.nonEmpty) mergeVars else default.mergeVars,
     if(tags.nonEmpty) tags else default.tags,
@@ -119,7 +119,7 @@ case class Recipient(email: String, name: Option[String] = None, recipType: Reci
 case class FileAttachment(mimeType: String, name: String, content: String)
 case class ContentImage(mimeType: String, name: String, content: String)
 case class MergeVar(name: String, content: String)
-case class PerRecipMergeVar(email: String, vars: Option[Seq[MergeVar]] = None)
+case class PerRecipMergeVar(email: String, vars: Seq[MergeVar] = Seq.empty)
 case class PerRecipMetadata(email: String, values: Option[Map[String, Int]] = None)
 
 case class MandrillError(status: SendStatusType, code: Int, name: String, message: String)
@@ -173,26 +173,26 @@ object Serializer {
 
   implicit val perRecipMatadataFormat: Format[PerRecipMetadata] = (
     (__ \ "rcpt").format[String] and
-      (__ \ "values").formatNullable[Map[String, Int]]
+    (__ \ "values").formatNullable[Map[String, Int]]
     )(PerRecipMetadata.apply, unlift(PerRecipMetadata.unapply))
 
   implicit val mergeVarFormat: Format[MergeVar] = Json.format[MergeVar]
 
   implicit val perRecipMergeVarFormat: Format[PerRecipMergeVar] = (
     (__ \ "rcpt").format[String] and
-      (__ \ "vars").formatNullable[Seq[MergeVar]]
+    (__ \ "vars").formatNullableIterable[Seq[MergeVar]]
     )(PerRecipMergeVar.apply, unlift(PerRecipMergeVar.unapply))
 
   implicit val recipientFormat: Format[Recipient] = (
     (__ \ "email").format[String] and
-      (__ \ "name").formatNullable[String] and
-      (__ \ "type").format[RecipientType]
+    (__ \ "name").formatNullable[String] and
+    (__ \ "type").format[RecipientType]
     )(Recipient.apply, unlift(Recipient.unapply))
 
   implicit val fileAttachmentFormat: Format[FileAttachment] = (
     (__ \ "type").format[String] and
-      (__ \ "name").format[String] and
-      (__ \ "content").format[String]
+    (__ \ "name").format[String] and
+    (__ \ "content").format[String]
     )(FileAttachment.apply, unlift(FileAttachment.unapply))
 
   implicit val contentImageFormat: Format[ContentImage] = (
@@ -229,13 +229,18 @@ object Serializer {
     (__ \ "google_analytics_domains").formatNullableIterable[Seq[String]] and
     (__ \ "google_analytics_campaign").formatNullableIterable[Seq[String]] and
     (__ \ "metadata").formatNullable[Map[String, String]] and
-    (__ \ "recipient_metadata").formatNullable[Seq[PerRecipMetadata]]
+    (__ \ "recipient_metadata").formatNullableIterable[Seq[PerRecipMetadata]]
   )(AdditionalSettings.apply, unlift(AdditionalSettings.unapply))
 
   implicit val templateFormat: Format[Template] = (
     (__ \ "template_name").format[String] and
     (__ \ "template_content").formatNullableIterable[Seq[MergeVar]]
     )(Template.apply, unlift(Template.unapply))
+
+  implicit val senderFormat: Format[Sender] = (
+    (__ \ "from_email").format[String](StringSkipReads) and
+      (__ \ "from_name").formatNullable[String]
+    )(Sender.apply, unlift(Sender.unapply))
 
   implicit val emailFormat: Format[Email] = (
     (__ \ "subject").format[String](StringSkipReads) and
@@ -247,11 +252,6 @@ object Serializer {
     (__ \ "images").formatNullableIterable[Seq[ContentImage]] and
     (__).format[AdditionalSettings]
     )(Email.apply, unlift(Email.unapply))
-
-  implicit val senderFormat: Format[Sender] = (
-    (__ \ "from_email").format[String](StringSkipReads) and
-    (__ \ "from_name").formatNullable[String]
-  )(Sender.apply, unlift(Sender.unapply))
 
   implicit val requestFormat: Format[Request] = (
     (__ \ "key").format[String] and

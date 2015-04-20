@@ -62,7 +62,7 @@ object MandrillPlugin {
 
 
 trait MandrillAPI {
-  def send(email: Email, async: Option[Boolean] = false, ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
+  def send(email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
   def sendTemplate(template: Template, email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
 }
 
