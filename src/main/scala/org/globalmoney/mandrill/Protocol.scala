@@ -7,6 +7,8 @@ import org.globalmoney.mandrill.MergeLanguageType.MergeLanguageType
 import org.globalmoney.mandrill.RecipientType.RecipientType
 import org.globalmoney.mandrill.RejectReasonType.RejectReasonType
 import org.globalmoney.mandrill.SendStatusType.SendStatusType
+import play.api.data.validation.ValidationError
+import play.api.libs.json.DefaultWrites.StringWrites
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -17,20 +19,20 @@ import play.api.libs.json.Reads.dateReads
  * Created by Viktor Zakalyuzhnyy on 07.04.15.
  */
 case class Request(key: String, message: Email, template: Option[Template] = None, async: Option[Boolean] = Some(false),
-                    ipPool: Option[String] = None, sendAt: Option[Date] = None) {
+                   ipPool: Option[String] = None, sendAt: Option[Date] = None) {
 
 
   private[mandrill] def withDefaults(default: Request) = Request(
     key,
     message.withDefaults(default.message),
-    template.fold(default.template){Some(_)},
-    async.fold(default.async){Some(_)},
-    ipPool.fold(default.ipPool){Some(_)},
-    sendAt.fold(default.sendAt){Some(_)}
+    template orElse default.template,
+    async orElse default.async,
+    ipPool orElse default.ipPool,
+    sendAt orElse default.sendAt
   )
 
 }
-case class Template(name: String, content: Option[Seq[MergeVar]] = None)
+case class Template(name: String, content: Seq[MergeVar] = None)
 
 case class AdditionalSettings(triggers: Triggers = new Triggers(),
                               headers: Option[Map[String, String]] = None,
@@ -38,32 +40,32 @@ case class AdditionalSettings(triggers: Triggers = new Triggers(),
                               trackingDomain: Option[String] = None,
                               signingDomain: Option[String] = None,
                               returnPathDomain: Option[String] = None,
-                              mergeLanguage: MergeLanguageType = MergeLanguageType.MAILCHIMP,
-                              globalMergeVars: Option[Seq[MergeVar]] = None,
-                              mergeVars: Option[Seq[PerRecipMergeVar]] = None,
-                              tags: Option[Seq[String]] = None,
+                              mergeLanguage: Option[MergeLanguageType] = MergeLanguageType.MAILCHIMP,
+                              globalMergeVars: Seq[MergeVar] = Seq.empty,
+                              mergeVars: Seq[PerRecipMergeVar] = Seq.empty,
+                              tags: Seq[String] = Seq.empty,
                               subAccount: Option[String] = None,
-                              googleAnalyticsDomains: Option[Seq[String]] = None,
-                              googleAnalyticsCampaign: Option[Seq[String]] = None,
+                              googleAnalyticsDomains: Seq[String] = Seq.empty,
+                              googleAnalyticsCampaign: Seq[String] = Seq.empty,
                               metadata: Option[Map[String, String]] = None,
-                              recipientMetadata: Option[Seq[PerRecipMetadata]] = None) {
+                              recipientMetadata: Seq[PerRecipMetadata] = Seq.empty) {
 
   private[mandrill] def withDefaults(default: AdditionalSettings): AdditionalSettings = AdditionalSettings(
     triggers.withDefaults(default.triggers),
-    headers.fold(default.headers){Some(_)},
-    bccAddress.fold(default.bccAddress){Some(_)},
-    trackingDomain.fold(default.trackingDomain){Some(_)},
-    signingDomain.fold(default.signingDomain){Some(_)},
-    returnPathDomain.fold(default.returnPathDomain){Some(_)},
-    if (Option(mergeLanguage).isDefined) mergeLanguage else default.mergeLanguage,
-    globalMergeVars.fold(default.globalMergeVars){Some(_)},
-    mergeVars.fold(default.mergeVars){Some(_)},
-    tags.fold(default.tags){Some(_)},
-    subAccount.fold(default.subAccount){Some(_)},
-    googleAnalyticsDomains.fold(default.googleAnalyticsCampaign){Some(_)},
-    googleAnalyticsCampaign.fold(default.googleAnalyticsCampaign){Some(_)},
-    metadata.fold(default.metadata){Some(_)},
-    recipientMetadata.fold(default.recipientMetadata){Some(_)}
+    headers orElse default.headers,
+    bccAddress orElse default.bccAddress,
+    trackingDomain orElse default.trackingDomain,
+    signingDomain orElse default.signingDomain,
+    returnPathDomain orElse default.returnPathDomain,
+    mergeLanguage orElse default.mergeLanguage,
+    if(globalMergeVars.nonEmpty) globalMergeVars else default.globalMergeVars,
+    if(mergeVars.nonEmpty) mergeVars else default.mergeVars,
+    if(tags.nonEmpty) tags else default.tags,
+    if(subAccount.nonEmpty) subAccount else default.subAccount,
+    if(googleAnalyticsDomains.nonEmpty) googleAnalyticsDomains else default.googleAnalyticsDomains,
+    if(googleAnalyticsCampaign.nonEmpty) googleAnalyticsCampaign else default.googleAnalyticsCampaign,
+    metadata orElse default.metadata,
+    if(recipientMetadata.nonEmpty) recipientMetadata else default.recipientMetadata
   )
 }
 
@@ -78,43 +80,41 @@ case class Triggers(important: Option[Boolean] = Some(false),
                     viewContentLink: Option[Boolean] = None,
                     merge: Option[Boolean] = None) {
   private[mandrill] def withDefaults(default: Triggers): Triggers = Triggers(
-    important.fold(default.important){Some(_)},
-    trackOpens.fold(default.trackOpens){Some(_)},
-    trackClicks.fold(default.trackClicks){Some(_)},
-    autoText.fold(default.autoText){Some(_)},
-    autoHtml.fold(default.autoHtml){Some(_)},
-    inlineCss.fold(default.inlineCss){Some(_)},
-    urlStripQs.fold(default.urlStripQs){Some(_)},
-    preserveRecipients.fold(default.preserveRecipients){Some(_)},
-    viewContentLink.fold(default.viewContentLink){Some(_)},
-    merge.fold(default.merge){Some(_)}
+    important orElse default.important,
+    trackOpens orElse default.trackOpens,
+    trackClicks orElse default.trackClicks,
+    autoText orElse default.autoText,
+    autoHtml orElse default.autoHtml,
+    inlineCss orElse default.inlineCss,
+    urlStripQs orElse default.urlStripQs,
+    preserveRecipients orElse default.preserveRecipients,
+    viewContentLink orElse default.viewContentLink,
+    merge orElse default.merge
   )
 }
 
-case class Email(
-                 subject: Option[String] = None,
-                 from: Option[String] = None,
-                 fromName: Option[String] = None,
-                 to: Option[Seq[Recipient]] = None,
-                 bodyText: Option[String] = None,
-                 bodyHtml: Option[String] = None,
-                 attachments: Option[Seq[FileAttachment]] = None,
-                 images: Option[Seq[ContentImage]] = None,
-                 settings: AdditionalSettings = AdditionalSettings()) {
+case class Email(subject: String,
+                from: Option[Sender] = None,
+                to: Seq[Recipient] = Seq.empty,
+                bodyText: Option[String] = None,
+                bodyHtml: Option[String] = None,
+                attachments: Seq[FileAttachment] = Seq.empty,
+                images: Seq[ContentImage] = Seq.empty,
+                settings: AdditionalSettings = AdditionalSettings()) {
 
   private[mandrill] def withDefaults(default: Email) = Email(
-    subject.fold(default.subject){Some(_)},
-    from.fold(default.from){Some(_)},
-    fromName.fold(default.fromName){Some(_)},
-    to.fold(default.to){Some(_)},
-    bodyText.fold(default.bodyText){Some(_)},
-    bodyHtml.fold(default.bodyHtml){Some(_)},
-    attachments.fold(default.attachments){Some(_)},
-    images.fold(default.images){Some(_)},
+    subject,
+    from orElse default.from,
+    if(to.nonEmpty) to else default.to,
+    bodyText orElse default.bodyText,
+    bodyHtml orElse default.bodyHtml,
+    attachments,
+    images,
     settings.withDefaults(default.settings)
-    )
+  )
 }
 
+case class Sender(email: String, name: Option[String] = None)
 case class Recipient(email: String, name: Option[String] = None, recipType: RecipientType = RecipientType.TO)
 case class FileAttachment(mimeType: String, name: String, content: String)
 case class ContentImage(mimeType: String, name: String, content: String)
@@ -173,30 +173,27 @@ object Serializer {
 
   implicit val perRecipMatadataFormat: Format[PerRecipMetadata] = (
     (__ \ "rcpt").format[String] and
-    (__ \ "values").formatNullable[Map[String, Int]]
-  )(PerRecipMetadata.apply, unlift(PerRecipMetadata.unapply))
+      (__ \ "values").formatNullable[Map[String, Int]]
+    )(PerRecipMetadata.apply, unlift(PerRecipMetadata.unapply))
 
-  implicit val mergeVarFormat: Format[MergeVar] = (
-    (__ \ "name").format[String] and
-    (__ \ "content").format[String]
-  )(MergeVar.apply, unlift(MergeVar.unapply))
+  implicit val mergeVarFormat: Format[MergeVar] = Json.format[MergeVar]
 
   implicit val perRecipMergeVarFormat: Format[PerRecipMergeVar] = (
     (__ \ "rcpt").format[String] and
-    (__ \ "vars").formatNullable[Seq[MergeVar]]
-  )(PerRecipMergeVar.apply, unlift(PerRecipMergeVar.unapply))
+      (__ \ "vars").formatNullable[Seq[MergeVar]]
+    )(PerRecipMergeVar.apply, unlift(PerRecipMergeVar.unapply))
 
   implicit val recipientFormat: Format[Recipient] = (
     (__ \ "email").format[String] and
-    (__ \ "name").formatNullable[String] and
-    (__ \ "type").format[RecipientType]
-  )(Recipient.apply, unlift(Recipient.unapply))
+      (__ \ "name").formatNullable[String] and
+      (__ \ "type").format[RecipientType]
+    )(Recipient.apply, unlift(Recipient.unapply))
 
   implicit val fileAttachmentFormat: Format[FileAttachment] = (
     (__ \ "type").format[String] and
-    (__ \ "name").format[String] and
-    (__ \ "content").format[String]
-  )(FileAttachment.apply, unlift(FileAttachment.unapply))
+      (__ \ "name").format[String] and
+      (__ \ "content").format[String]
+    )(FileAttachment.apply, unlift(FileAttachment.unapply))
 
   implicit val contentImageFormat: Format[ContentImage] = (
     (__ \ "type").format[String] and
@@ -224,33 +221,37 @@ object Serializer {
     (__ \ "tracking_domain").formatNullable[String] and
     (__ \ "signing_domain").formatNullable[String] and
     (__ \ "return_path_domain").formatNullable[String] and
-    (__ \ "merge_language").format[MergeLanguageType] and
-    (__ \ "global_merge_vars").formatNullable[Seq[MergeVar]] and
-    (__ \ "merge_vars").formatNullable[Seq[PerRecipMergeVar]] and
-    (__ \ "tags").formatNullable[Seq[String]] and
+    (__ \ "merge_language").formatNullable[MergeLanguageType] and
+    (__ \ "global_merge_vars").formatNullableIterable[Seq[MergeVar]] and
+    (__ \ "merge_vars").formatNullableIterable[Seq[PerRecipMergeVar]] and
+    (__ \ "tags").formatNullableIterable[Seq[String]] and
     (__ \ "subaccount").formatNullable[String] and
-    (__ \ "google_analytics_domains").formatNullable[Seq[String]] and
-    (__ \ "google_analytics_campaign").formatNullable[Seq[String]] and
+    (__ \ "google_analytics_domains").formatNullableIterable[Seq[String]] and
+    (__ \ "google_analytics_campaign").formatNullableIterable[Seq[String]] and
     (__ \ "metadata").formatNullable[Map[String, String]] and
     (__ \ "recipient_metadata").formatNullable[Seq[PerRecipMetadata]]
   )(AdditionalSettings.apply, unlift(AdditionalSettings.unapply))
 
   implicit val templateFormat: Format[Template] = (
     (__ \ "template_name").format[String] and
-    (__ \ "template_content").formatNullable[Seq[MergeVar]]
-  )(Template.apply, unlift(Template.unapply))
+    (__ \ "template_content").formatNullableIterable[Seq[MergeVar]]
+    )(Template.apply, unlift(Template.unapply))
 
   implicit val emailFormat: Format[Email] = (
-    (__ \ "subject").formatNullable[String] and
-    (__ \ "from_email").formatNullable[String] and
-    (__ \ "from_name").formatNullable[String] and
-    (__ \ "to").formatNullable[Seq[Recipient]] and
+    (__ \ "subject").format[String](StringSkipReads) and
+    (__).formatNullable[Sender] and
+    (__ \ "to").formatNullableIterable[Seq[Recipient]] and
     (__ \ "text").formatNullable[String] and
     (__ \ "html").formatNullable[String] and
-    (__ \ "attachments").formatNullable[Seq[FileAttachment]] and
-    (__ \ "images").formatNullable[Seq[ContentImage]] and
+    (__ \ "attachments").formatNullableIterable[Seq[FileAttachment]] and
+    (__ \ "images").formatNullableIterable[Seq[ContentImage]] and
     (__).format[AdditionalSettings]
-  )(Email.apply, unlift(Email.unapply))
+    )(Email.apply, unlift(Email.unapply))
+
+  implicit val senderFormat: Format[Sender] = (
+    (__ \ "from_email").format[String](StringSkipReads) and
+    (__ \ "from_name").formatNullable[String]
+  )(Sender.apply, unlift(Sender.unapply))
 
   implicit val requestFormat: Format[Request] = (
     (__ \ "key").format[String] and
@@ -259,7 +260,7 @@ object Serializer {
     (__ \ "async").formatNullable[Boolean] and
     (__ \ "ip_pool").formatNullable[String] and
     (__ \ "send_at").formatNullable[Date]
-  )(Request.apply, unlift(Request.unapply))
+    )(Request.apply, unlift(Request.unapply))
 
   implicit val errorFormat: Format[MandrillError] = (
     (__ \ "status").format[SendStatusType] and
@@ -273,12 +274,42 @@ object Serializer {
     (__ \ "status").format[SendStatusType] and
     (__ \ "reject_reason").format[RejectReasonType] and
     (__ \ "_id").format[String]
-  )(Result.apply, unlift(Result.unapply))
+    )(Result.apply, unlift(Result.unapply))
 
   def printJson (request: Request, pretty: Boolean = false): String = {
     val json = Json.toJson(request)
     if (pretty) Json.prettyPrint(json) else Json.stringify(json)
   }
+
+
+  // http://stackoverflow.com/questions/21297987/play-scala-how-to-prevent-json-serialization-of-empty-arrays
+  implicit class PathAdditions(path: JsPath) {
+
+    def readNullableIterable[A <: Iterable[_]](implicit reads: Reads[A]): Reads[A] =
+      Reads((json: JsValue) => path.applyTillLast(json).fold(
+        error => error,
+        result => result.fold(
+          invalid = (_) => reads.reads(JsArray()),
+          valid = {
+            case JsNull => reads.reads(JsArray())
+            case js => reads.reads(js).repath(path)
+          })
+      ))
+
+    def writeNullableIterable[A <: Iterable[_]](implicit writes: Writes[A]): OWrites[A] =
+      OWrites[A]{ (a: A) =>
+        if (a.isEmpty) Json.obj()
+        else JsPath.createObj(path -> writes.writes(a))
+      }
+
+    /** When writing it ignores the property when the collection is empty,
+      * when reading undefined and empty jsarray becomes an empty collection */
+    def formatNullableIterable[A <: Iterable[_]](implicit format: Format[A]): OFormat[A] =
+      OFormat[A](readNullableIterable(format), writeNullableIterable(format))
+  }
+
+
+  object StringSkipReads extends Reads[String] { def reads(json: JsValue) = JsSuccess("") }
 }
 
 

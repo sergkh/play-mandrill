@@ -21,12 +21,10 @@ class MandrillPlugin(app: Application) extends play.api.Plugin {
         case mail: JsSuccess[Email] =>
           mail.get
         case e: JsError =>
-          Logger.warn("Could not parse default mail request (mandrill.default.mail.json in application.conf). Will use default. Error:" + e.errors.toString())
-          new Email()
+          throw new RuntimeException("Could not parse default mail request (mandrill.default.mail.json in application.conf). Error:" + e.errors.toString())
       }
     } else {
-      Logger.warn("Default mail request not found (mandrill.default.mail.json in application.conf). Will use default")
-      new Email()
+      throw new RuntimeException("Default mail request not found (mandrill.mail in application.conf)")
     }
 
     if (mock) {
@@ -54,15 +52,17 @@ class MandrillPlugin(app: Application) extends play.api.Plugin {
 
 
 object MandrillPlugin {
+
   def send(email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None)(implicit app: play.api.Application) =
     app.plugin(classOf[MandrillPlugin]).get.instance.send(email, async, ipPool, sendAt)
+
   def sendTemplate(template: Template, email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None)(implicit app: play.api.Application) =
     app.plugin(classOf[MandrillPlugin]).get.instance.sendTemplate(template, email, async, ipPool, sendAt)
 }
 
 
 trait MandrillAPI {
-  def send(email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
+  def send(email: Email, async: Option[Boolean] = false, ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
   def sendTemplate(template: Template, email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]]
 }
 
