@@ -15,16 +15,16 @@ class MandrillPlugin(app: Application) extends play.api.Plugin {
   private lazy val mock = app.configuration.getBoolean("mandrill.mock").getOrElse(false)
 
   private lazy val mandrillInstance: MandrillAPI = {
-    val defaultMailRequestConf = app.configuration.getObject("mandrill.mail")
+    val defaultMailRequestConf = app.configuration.getObject("mandrill")
     val defaultMail = if (defaultMailRequestConf.isDefined) {
       Json.parse(defaultMailRequestConf.get.render(ConfigRenderOptions.concise())).validate[Email] match {
         case mail: JsSuccess[Email] =>
           mail.get
         case e: JsError =>
-          throw new RuntimeException("Could not parse default mail request (mandrill.default.mail.json in application.conf). Error:" + e.errors.toString())
+          throw new RuntimeException("Could not parse default mail request (mandrill in application.conf). Error:" + e.errors.toString())
       }
     } else {
-      throw new RuntimeException("Default mail request not found (mandrill.mail in application.conf)")
+      throw new RuntimeException("Default mail request not found (mandrill in application.conf)")
     }
 
     if (mock) {
