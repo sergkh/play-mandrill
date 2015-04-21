@@ -91,7 +91,7 @@ mandrill {
     }
   ]
 
-  merge_vars" : [ {
+  merge_vars = [ {
     rcpt = "recipient.email@example.com"
     vars = [ {
        name = "merge2"
