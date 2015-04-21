@@ -18,8 +18,12 @@ import play.api.libs.json.Reads.dateReads
 /**
  * Created by Viktor Zakalyuzhnyy on 07.04.15.
  */
-case class Request(key: String, message: Email, template: Option[Template] = None, async: Option[Boolean] = Some(false),
-                   ipPool: Option[String] = None, sendAt: Option[Date] = None) {
+case class Request(key: String,
+                   message: Email,
+                   template: Option[Template] = None,
+                   async: Option[Boolean] = Some(false),
+                   ipPool: Option[String] = None,
+                   sendAt: Option[Date] = None) {
 
 
   private[mandrill] def withDefaults(default: Request) = Request(
@@ -69,7 +73,7 @@ case class AdditionalSettings(triggers: Triggers = new Triggers(),
   )
 }
 
-case class Triggers(important: Option[Boolean] = Some(false),
+case class Triggers(important: Option[Boolean] = None,
                     trackOpens: Option[Boolean] = None,
                     trackClicks: Option[Boolean] = None,
                     autoText: Option[Boolean] = None,
@@ -94,7 +98,7 @@ case class Triggers(important: Option[Boolean] = Some(false),
 }
 
 case class Email(subject: String,
-                from: Option[Sender] = None,
+                from: Sender = Sender(""),
                 to: Seq[Recipient] = Seq.empty,
                 bodyText: Option[String] = None,
                 bodyHtml: Option[String] = None,
@@ -104,7 +108,7 @@ case class Email(subject: String,
 
   private[mandrill] def withDefaults(default: Email) = Email(
     subject,
-    from orElse default.from,
+    from.withDefaults(default.from),
     if(to.nonEmpty) to else default.to,
     bodyText orElse default.bodyText,
     bodyHtml orElse default.bodyHtml,
@@ -114,7 +118,12 @@ case class Email(subject: String,
   )
 }
 
-case class Sender(email: String, name: Option[String] = None)
+case class Sender(email: String, name: Option[String] = None) {
+  private[mandrill] def withDefaults(default: Sender) = Sender(
+    if("" eq email) default.email else email,
+    name orElse default.name
+  )
+}
 case class Recipient(email: String, name: Option[String] = None, recipType: RecipientType = RecipientType.TO)
 case class FileAttachment(mimeType: String, name: String, content: String)
 case class ContentImage(mimeType: String, name: String, content: String)
@@ -238,13 +247,13 @@ object Serializer {
     )(Template.apply, unlift(Template.unapply))
 
   implicit val senderFormat: Format[Sender] = (
-    (__ \ "from_email").format[String](StringSkipReads) and
-      (__ \ "from_name").formatNullable[String]
+    (__ \ "from_email").formatNullable[String].inmap[String](_.getOrElse(""), Some(_)) and
+    (__ \ "from_name").formatNullable[String]
     )(Sender.apply, unlift(Sender.unapply))
 
   implicit val emailFormat: Format[Email] = (
-    (__ \ "subject").format[String](StringSkipReads) and
-    (__).formatNullable[Sender] and
+    (__ \ "subject").formatNullable[String].inmap[String](_.getOrElse(""), Some(_)) and
+    (__).format[Sender] and
     (__ \ "to").formatNullableIterable[Seq[Recipient]] and
     (__ \ "text").formatNullable[String] and
     (__ \ "html").formatNullable[String] and
@@ -285,7 +294,12 @@ object Serializer {
   // http://stackoverflow.com/questions/21297987/play-scala-how-to-prevent-json-serialization-of-empty-arrays
   implicit class PathAdditions(path: JsPath) {
 
-    def readNullableIterable[A <: Iterable[_]](implicit reads: Reads[A]): Reads[A] =
+    /** When writing it ignores the property when the collection is empty,
+      * when reading undefined and empty jsarray becomes an empty collection */
+    def formatNullableIterable[A <: Iterable[_]](implicit format: Format[A]): OFormat[A] =
+      OFormat[A](readNullableIterable(format), writeNullableIterable(format))
+
+    private def readNullableIterable[A <: Iterable[_]](implicit reads: Reads[A]): Reads[A] =
       Reads((json: JsValue) => path.applyTillLast(json).fold(
         error => error,
         result => result.fold(
@@ -296,20 +310,13 @@ object Serializer {
           })
       ))
 
-    def writeNullableIterable[A <: Iterable[_]](implicit writes: Writes[A]): OWrites[A] =
+    private def writeNullableIterable[A <: Iterable[_]](implicit writes: Writes[A]): OWrites[A] =
       OWrites[A]{ (a: A) =>
         if (a.isEmpty) Json.obj()
         else JsPath.createObj(path -> writes.writes(a))
       }
-
-    /** When writing it ignores the property when the collection is empty,
-      * when reading undefined and empty jsarray becomes an empty collection */
-    def formatNullableIterable[A <: Iterable[_]](implicit format: Format[A]): OFormat[A] =
-      OFormat[A](readNullableIterable(format), writeNullableIterable(format))
   }
 
-
-  object StringSkipReads extends Reads[String] { def reads(json: JsValue) = JsSuccess("") }
 }
 
 
