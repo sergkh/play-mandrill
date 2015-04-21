@@ -76,7 +76,7 @@ class MockMandrill(defaultMail: Email) extends MandrillAPI {
   }
 
   def sendRequest(template: Option[Template], email: Email, async: Option[Boolean] = Some(false), ipPool: Option[String] = None, sendAt: Option[Date] = None): Future[List[Result]] = {
-    Logger.debug(s"Mock mandrill email send: ${Serializer.printJson(Request("", email.withDefaults(defaultMail), template), pretty = true)}")
+    Logger(getClass).debug(s"Mock mandrill email send: ${Serializer.printJson(Request("", email.withDefaults(defaultMail), template), pretty = true)}")
     Future(List[Result]())
   }
 }
@@ -103,12 +103,12 @@ class RestMandrill(apiUrl: String, apiMailUrl: String, key: String, defaultMail:
            sendAt: Option[Date] = None): Future[List[Result]] = {
 
     val request = Request(key, email.withDefaults(defaultMail), template, async, ipPool, sendAt)
-    Logger.debug(s"Server request: ${Serializer.printJson(request, pretty = true)}")
+    Logger(getClass).debug(s"Server request: ${Serializer.printJson(request, pretty = true)}")
 
     val responseFuture = WS.url(mailUrl).post(Serializer.printJson(request))
 
     responseFuture map { resp =>
-      Logger.debug(s"Server response ${resp.status}, body: ${resp.body}")
+      Logger(getClass).debug(s"Server response ${resp.status}, body: ${resp.body}")
 
       resp.status match {
         case 200 =>
